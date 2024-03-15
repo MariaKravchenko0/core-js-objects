@@ -384,33 +384,152 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
+class Builder {
+  constructor() {
+    this.selectorsMap = new Map();
+    this.combinedSelectors = [];
+  }
+
+  checkDuplicates(selector) {
+    if (
+      selector === 'element' ||
+      selector === 'id' ||
+      selector === 'pseudoElement'
+    ) {
+      if (this.selectorsMap.has(selector))
+        throw new Error(
+          'Element, id and pseudo-element should not occur more then one time inside the selector'
+        );
+    }
+  }
+
+  checkOrder(selector) {
+    const order = [
+      'element',
+      'id',
+      'class',
+      'attr',
+      'pseudoClass',
+      'pseudoElement',
+    ];
+
+    const index = order.indexOf(selector);
+
+    for (let i = index + 1; i < order.length; i += 1) {
+      if (this.selectorsMap.has(order[i]))
+        throw new Error(
+          'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+        );
+    }
+  }
+
+  element(value) {
+    this.checkOrder('element');
+    this.checkDuplicates('element');
+
+    this.selectorsMap.set('element', value);
+
+    return this;
+  }
+
+  id(value) {
+    this.checkOrder('id');
+    this.checkDuplicates('id');
+
+    this.selectorsMap.set('id', `#${value}`);
+
+    return this;
+  }
+
+  class(value) {
+    this.checkOrder('class');
+
+    if (!this.selectorsMap.has('class')) {
+      this.selectorsMap.set('class', []);
+    }
+
+    this.selectorsMap.get('class').push(`.${value}`);
+
+    return this;
+  }
+
+  attr(value) {
+    this.checkOrder('attr');
+
+    if (!this.selectorsMap.has('attr')) {
+      this.selectorsMap.set('attr', []);
+    }
+
+    this.selectorsMap.get('attr').push(`[${value}]`);
+
+    return this;
+  }
+
+  pseudoClass(value) {
+    this.checkOrder('pseudoClass');
+
+    if (!this.selectorsMap.has('pseudoClass')) {
+      this.selectorsMap.set('pseudoClass', []);
+    }
+
+    this.selectorsMap.get('pseudoClass').push(`:${value}`);
+
+    return this;
+  }
+
+  pseudoElement(value) {
+    this.checkOrder('pseudoElement');
+    this.checkDuplicates('pseudoElement');
+
+    this.selectorsMap.set('pseudoElement', `::${value}`);
+
+    return this;
+  }
+
+  combine(selector1, combinator, selector2) {
+    this.combinedSelectors.push(
+      `${selector1.stringify()} ${combinator} ${selector2.stringify()}`
+    );
+
+    return this;
+  }
+
+  stringify() {
+    if (this.combinedSelectors.length > 0) {
+      return this.combinedSelectors.join('');
+    }
+
+    return [...this.selectorsMap.values()].flat().join('');
+  }
+}
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    return new Builder().element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return new Builder().id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return new Builder().class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return new Builder().attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return new Builder().pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return new Builder().pseudoElement(value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return new Builder().combine(selector1, combinator, selector2);
   },
 };
 
